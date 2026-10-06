@@ -95,9 +95,15 @@ kg_cmd_trace(KgContext *ctx)
     gum_interceptor_begin_transaction(ic);
 
     GumApiResolver *resolver = gum_api_resolver_make("module");
-    
+
+    GError *error = NULL;
     gum_api_resolver_enumerate_matches(resolver, ctx->argv[0],
-                                       (GumFoundApiFunc) kg_on_api_match, NULL);
+                                       (GumFoundApiFunc) kg_on_api_match,
+                                       NULL, &error);
+    if (error != NULL) {
+        g_printerr("enumerate_matches failed: %s\n", error->message);
+        g_error_free(error);
+    }
 
     gum_interceptor_end_transaction(ic);
     g_object_unref(resolver);
