@@ -7,14 +7,16 @@ kg_on_mem_access(GumMemoryAccessMonitor *monitor,
 {
     const gchar *op = "?";
     switch (d->operation) {
-        case GUM_MEMORY_OPERATION_READ: op = "R"; break;
-        case GUM_MEMORY_OPERATION_WRITE: op = "W"; break;
-        case GUM_MEMORY_OPERATION_EXECUTE: op = "X"; break;
+        case GUM_MEMORY_OPERATION_OPEN:      op = "open";      break;
+        case GUM_MEMORY_OPERATION_EXCLUSIVE: op = "exclusive"; break;
     }
-    g_print("[mem] %s addr=%p from=%p tid=%u page=%u/%u\n",
-            op, GSIZE_TO_POINTER(d->address),
+    g_print("[mem] %s addr=%p from=%p tid=%lu page=%u/%u\n",
+            op,
+            GSIZE_TO_POINTER(d->address),
             GSIZE_TO_POINTER(d->from),
-            d->thread_id, d->page_index + 1, d->pages_total);
+            (unsigned long) d->thread_id,
+            d->page_index + 1,
+            d->pages_total);
 }
 
 int
