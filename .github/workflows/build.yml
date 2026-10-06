@@ -14,8 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ldid
-        run: brew install ldid
+      - name: Install dependencies
+        run: |
+          brew install glib ldid pkg-config
 
       - name: Download Frida devkits
         run: |
