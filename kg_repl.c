@@ -177,15 +177,7 @@ kg_cmd_repl(KgContext *ctx)
     g_signal_connect(repl->script, "error",
                      G_CALLBACK(kg_on_repl_error), repl);
 
-    error = NULL;
-    gum_script_load_sync(repl->script, &error);
-    if (error != NULL) {
-        g_printerr("load failed: %s\n", error->message);
-        g_error_free(error);
-        g_object_unref(repl->script);
-        g_free(repl);
-        return 1;
-    }
+    gum_script_load_sync(repl->script, NULL);
 
     g_print("[*] REPL ready (QuickJS). Type 'exit' to quit.\n");
     g_print("[*] Helpers: kg.p kg.r kg.w kg.m kg.e kg.h kg.d\n");
@@ -219,13 +211,7 @@ kg_cmd_repl(KgContext *ctx)
                              G_CALLBACK(kg_on_repl_message), repl);
             g_signal_connect(one, "error",
                              G_CALLBACK(kg_on_repl_error), repl);
-            error = NULL;
-            gum_script_load_sync(one, &error);
-            if (error != NULL) {
-                g_printerr("[eval error] %s\n", error->message);
-                g_error_free(error);
-                error = NULL;
-            }
+            gum_script_load_sync(one, NULL);
             gum_script_unload_sync(one, NULL);
             g_object_unref(one);
         } else {

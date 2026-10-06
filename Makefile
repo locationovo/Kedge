@@ -4,7 +4,6 @@ SDK_PATH ?= $(shell xcrun --sdk iphoneos --show-sdk-path)
 
 CC      := xcrun --sdk iphoneos clang
 GLIB_CFLAGS := $(shell pkg-config --cflags glib-2.0)
-GLIB_LIBS   := $(shell pkg-config --libs glib-2.0)
 
 CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter -I./include \
            $(GLIB_CFLAGS) \
@@ -12,7 +11,7 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter -I./include \
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LIBS    := -L./lib -lfrida-gum -lfrida-gumjs \
-           -lpthread -ldl -lm -lresolv $(GLIB_LIBS)
+           -lpthread -ldl -lm -lresolv
 
 BIN   := kedge
 SRCS  := main.c kg_util.c kg_process.c kg_hook.c kg_trace.c \
@@ -34,7 +33,7 @@ payload: kg_agent.c
 	      -L./lib -lfrida-gum \
 	      -target $(TARGET) -isysroot $(SDK_PATH) \
 	      -framework Foundation -framework CoreFoundation \
-	      -lpthread -ldl -lm $(GLIB_LIBS)
+	      -lpthread -ldl -lm
 
 clean:
 	rm -f $(OBJS) $(BIN) kg_agent.dylib
