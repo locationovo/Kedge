@@ -1,12 +1,18 @@
 #include "kg.h"
 
 static void
-kg_print_module(const GumModuleDetails *d, gpointer user_data)
+kg_print_module(const GumModule *m, gpointer user_data)
 {
-    g_print("  %p-%p  %s\n",
-            d->range->base_address,
-            (guint8 *) d->range->base_address + d->range->size,
-            d->path ? d->path : "?");
+    const GumMemoryRange *range = gum_module_get_range(m);
+    const gchar *path = gum_module_get_path(m);
+    const gchar *name = gum_module_get_name(m);
+
+    if (range != NULL) {
+        g_print("  %p-%p  %s\n",
+                GSIZE_TO_POINTER(range->base_address),
+                GSIZE_TO_POINTER(range->base_address + range->size),
+                path ? path : (name ? name : "?"));
+    }
 }
 
 static void
@@ -20,8 +26,8 @@ kg_print_thread(const GumThreadDetails *d, gpointer user_data)
         case GUM_THREAD_UNINTERRUPTIBLE: state = "uninterruptible"; break;
         case GUM_THREAD_HALTED: state = "halted"; break;
     }
-    g_print("  tid=%-8u state=%-15s name=%s\n",
-            d->id, state, d->name ? d->name : "-");
+    g_print("  tid=%-8lu state=%-15s name=%s\n",
+            (unsigned long) d->id, state, d->name ? d->name : "-");
 }
 
 int
