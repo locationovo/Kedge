@@ -7,8 +7,8 @@ kg_on_mem_access(GumMemoryAccessMonitor *monitor,
 {
     const gchar *op = "?";
     switch (d->operation) {
-        case GUM_MEMORY_OPERATION_OPEN:      op = "open";      break;
-        case GUM_MEMORY_OPERATION_EXCLUSIVE: op = "exclusive"; break;
+        case GUM_MEMORY_ACCESS_OPEN:      op = "open";      break;
+        case GUM_MEMORY_ACCESS_EXCLUSIVE: op = "exclusive"; break;
     }
     g_print("[mem] %s addr=%p from=%p tid=%lu page=%u/%u\n",
             op,
