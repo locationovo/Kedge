@@ -28,15 +28,16 @@ static const KgCmd cmds[] = {
 int
 main(int argc, char **argv)
 {
+    gum_init_embedded();
+
     if (argc < 2) {
         g_printerr("usage: kedge <");
         for (const KgCmd *c = cmds; c->name; c++)
             g_printerr("%s ", c->name);
         g_printerr(">\n");
+        gum_deinit_embedded();
         return 1;
     }
-
-    gum_init_embedded();
 
     KgContext ctx = { .argc = argc - 2, .argv = argv + 2 };
     int ret = 1;
