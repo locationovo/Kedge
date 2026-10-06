@@ -1,0 +1,45 @@
+name: Build Kedge
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ldid
+        run: brew install ldid
+
+      - name: Download Frida devkits
+        run: |
+          FRIDA_VERSION=17.22.2
+          mkdir -p include lib
+          curl -sLO https://github.com/frida/frida/releases/download/${FRIDA_VERSION}/frida-gum-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
+          curl -sLO https://github.com/frida/frida/releases/download/${FRIDA_VERSION}/frida-gumjs-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
+          tar xf frida-gum-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
+          tar xf frida-gumjs-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
+          find . -name 'frida-gum.h' -exec cp {} include/ \;
+          find . -name 'libfrida-gum.a' -exec cp {} lib/ \;
+          find . -name 'frida-gumjs.h' -exec cp {} include/ \;
+          find . -name 'libfrida-gumjs.a' -exec cp {} lib/ \;
+
+      - name: Build
+        run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          make SDK_PATH="$SDK_PATH"
+
+      - name: Sign
+        run: ldid -Sentitlements.plist kedge
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kedge
+          path: kedge
