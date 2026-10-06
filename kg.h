@@ -12,11 +12,11 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <mach/mach.h>
-#include <mach/mach_vm.h>
 #include <mach/thread_act.h>
 #include <mach/thread_info.h>
 #include <mach/task_info.h>
-#include <libproc.h>
+#include <mach/vm_types.h>
+#include <mach/arm/thread_status.h>
 
 typedef struct {
     int argc;

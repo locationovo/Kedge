@@ -11,7 +11,7 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter -I./include \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
-LIBS    := -L./lib -lfrida-gum -lfrida-gumjs -lreadline \
+LIBS    := -L./lib -lfrida-gum -lfrida-gumjs \
            -lpthread -ldl -lm -lresolv $(GLIB_LIBS)
 
 BIN   := kedge

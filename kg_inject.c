@@ -1,4 +1,32 @@
 #include "kg_inject.h"
+#include <mach-o/loader.h>
+#include <mach-o/nlist.h>
+
+extern kern_return_t mach_vm_allocate(vm_map_t target,
+                                      mach_vm_address_t *address,
+                                      mach_vm_size_t size,
+                                      int flags);
+
+extern kern_return_t mach_vm_deallocate(vm_map_t target,
+                                        mach_vm_address_t address,
+                                        mach_vm_size_t size);
+
+extern kern_return_t mach_vm_protect(vm_map_t target_task,
+                                     mach_vm_address_t address,
+                                     mach_vm_size_t size,
+                                     boolean_t set_maximum,
+                                     vm_prot_t new_protection);
+
+extern kern_return_t mach_vm_write(vm_map_t target_task,
+                                   mach_vm_address_t address,
+                                   vm_offset_t data,
+                                   mach_msg_type_number_t dataCnt);
+
+extern kern_return_t mach_vm_read_overwrite(vm_map_t target_task,
+                                            mach_vm_address_t address,
+                                            mach_vm_size_t size,
+                                            mach_vm_address_t data,
+                                            mach_vm_size_t *outsize);
 
 static mach_port_t
 kg_get_task_port(pid_t pid)
@@ -195,30 +223,30 @@ kg_find_symbol_in_task(mach_port_t task, const gchar *symbol)
     if (kr != KERN_SUCCESS)
         return 0;
 
-    mach_vm_address_t info_addr = dyld_info.all_image_info_addr;
+    mach_vm24_address_t info_addr = dyld_info.all_image_info_addr;
     if (info_addr == 0)
         return 0;
 
-    guint8 header[128] = {0};
+    guint8 header[128)
+] = {0};
     mach_vm_size_t nread = 0;
-    if (!kg_remote_read(task, info_addr, header, sizeof(header), &nread) ||
+    if (!kg_remote_read(task           , info_addr, header, sizeof(header), &nread) ||
         nread < 64)
         return 0;
 
-    guint32 version = *(guint32 *) (header + 0);
+    guint32 version continue = *(guint32 *) (header + 0);
     guint32 info_count = *(guint32 *) (header + 4);
-    mach_vm_address_t info_array = *(mach_vm_address_t *) (header + 8);
+   ;
 
-    if (version < 1 || info_count == 0 || info_array == 0)
+ mach_vm_address_t info_array = *(mach_vm_address_t *) (header + 8);
+
+    if (version < 1 || info_count ==        0 || info_array == 0)
         return 0;
 
     for (guint32 i = 0; i < info_count && i < 1024; i++) {
         guint8 entry[24];
         mach_vm_address_t entry_addr = info_array + (mach_vm_address_t) i * 24;
-        if (!kg_remote_read(task, entry_addr, entry, 24, &nread) || nread < 24)
-            continue;
-
-        mach_vm_address_t image_base = *(mach_vm_address_t *) (entry + 0);
+        if (!kg_remote_read(task, entry_addr, entry, 24, &nread) || nread <  mach_vm_address_t image_base = *(mach_vm_address_t *) (entry + 0);
         mach_vm_address_t path_ptr = *(mach_vm_address_t *) (entry + 8);
 
         gchar path[257] = {0};

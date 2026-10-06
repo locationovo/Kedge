@@ -1,7 +1,29 @@
 #include "kg.h"
 #include "kg_util.h"
-#include <readline/readline.h>
-#include <readline/history.h>
+
+typedef char *(*readline_fn)(const char *);
+typedef void (*add_history_fn)(const char *);
+typedef void (*using_history_fn)(void);
+
+static readline_fn p_readline = NULL;
+static add_history_fn p_add_history = NULL;
+static using_history_fn p_using_history = NULL;
+
+static gboolean
+kg_load_readline(void)
+{
+    void *h = dlopen("/var/jb/usr/lib/libreadline.dylib", RTLD_LAZY);
+    if (h == NULL)
+        h = dlopen("/usr/lib/libreadline.dylib", RTLD_LAZY);
+    if (h == NULL)
+        h = dlopen("libreadline.dylib", RTLD_LAZY);
+    if (h == NULL)
+        return FALSE;
+    p_readline = (readline_fn) dlsym(h, "readline");
+    p_add_history = (add_history_fn) dlsym(h, "add_history");
+    p_using_history = (using_history_fn) dlsym(h, "using_history");
+    return p_readline != NULL;
+}
 
 typedef struct {
     GumScriptBackend *backend;
@@ -95,6 +117,22 @@ kg_wrap_input(const gchar *line)
     return wrapped;
 }
 
+static gchar *
+kg_read_line(const gchar *prompt)
+{
+    if (p_readline != NULL)
+        return p_readline(prompt);
+    g_print("%s", prompt);
+    fflush(stdout);
+    gchar buf[4096];
+    if (fgets(buf, sizeof(buf), stdin) == NULL)
+        return NULL;
+    gsize len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n')
+        buf[len - 1] = '\0';
+    return g_strdup(buf);
+}
+
 int
 kg_cmd_repl(KgContext *ctx)
 {
@@ -106,6 +144,9 @@ kg_cmd_repl(KgContext *ctx)
         g_free(repl);
         return 1;
     }
+
+    if (kg_load_readline() && p_using_history != NULL)
+        p_using_history();
 
     static const gchar *bootstrap =
         "globalThis.kg={"
@@ -145,25 +186,24 @@ kg_cmd_repl(KgContext *ctx)
     g_print("[*] REPL ready (QuickJS). Type 'exit' to quit.\n");
     g_print("[*] Helpers: kg.p kg.r kg.w kg.m kg.e kg.h kg.d\n");
 
-    using_history();
     while (TRUE) {
-        gchar *line = readline("kg> ");
+        gchar *line = kg_read_line("kg> ");
         if (line == NULL)
             break;
-        if (strlen(line) > 0)
-            add_history(line);
+        if (strlen(line) > 0 && p_add_history != NULL)
+            p_add_history(line);
         if (g_strcmp0(line, "exit") == 0 ||
             g_strcmp0(line, "quit") == 0) {
-            free(line);
+            g_free(line);
             break;
         }
         if (strlen(line) == 0) {
-            free(line);
+            g_free(line);
             continue;
         }
 
         gchar *wrapped = kg_wrap_input(line);
-        free(line);
+        g_free(line);
 
         GumScript *one = gum_script_backend_create_sync(
             repl->backend, "repl-once", wrapped, NULL, &error);
