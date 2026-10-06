@@ -223,33 +223,37 @@ kg_find_symbol_in_task(mach_port_t task, const gchar *symbol)
     if (kr != KERN_SUCCESS)
         return 0;
 
-    mach_vm24_address_t info_addr = dyld_info.all_image_info_addr;
+    mach_vm_address_t info_addr = dyld_info.all_image_info_addr;
     if (info_addr == 0)
         return 0;
 
-    guint8 header[128)
-] = {0};
+    guint8 header[128];
+    memset(header, 0, sizeof(header));
     mach_vm_size_t nread = 0;
-    if (!kg_remote_read(task           , info_addr, header, sizeof(header), &nread) ||
+    if (!kg_remote_read(task, info_addr, header, sizeof(header), &nread) ||
         nread < 64)
         return 0;
 
-    guint32 version continue = *(guint32 *) (header + 0);
+    guint32 version = *(guint32 *) (header + 0);
     guint32 info_count = *(guint32 *) (header + 4);
-   ;
+    mach_vm_address_t info_array = *(mach_vm_address_t *) (header + 8);
 
- mach_vm_address_t info_array = *(mach_vm_address_t *) (header + 8);
-
-    if (version < 1 || info_count ==        0 || info_array == 0)
+    if (version < 1 || info_count == 0 || info_array == 0)
         return 0;
 
     for (guint32 i = 0; i < info_count && i < 1024; i++) {
         guint8 entry[24];
-        mach_vm_address_t entry_addr = info_array + (mach_vm_address_t) i * 24;
-        if (!kg_remote_read(task, entry_addr, entry, 24, &nread) || nread <  mach_vm_address_t image_base = *(mach_vm_address_t *) (entry + 0);
+        mach_vm_address_t entry_addr =
+            info_array + (mach_vm_address_t) i * 24;
+        if (!kg_remote_read(task, entry_addr, entry, 24, &nread) ||
+            nread < 24)
+            continue;
+
+        mach_vm_address_t image_base = *(mach_vm_address_t *) (entry + 0);
         mach_vm_address_t path_ptr = *(mach_vm_address_t *) (entry + 8);
 
-        gchar path[257] = {0};
+        gchar path[257];
+        memset(path, 0, sizeof(path));
         if (!kg_remote_read(task, path_ptr, path, 256, &nread) || nread < 2)
             continue;
         path[256] = '\0';
@@ -277,13 +281,16 @@ kg_find_symbol_in_task(mach_port_t task, const gchar *symbol)
                     struct nlist_64 nl;
                     mach_vm_address_t nl_addr = image_base + sc.symoff +
                         (mach_vm_address_t) k * sizeof(nl);
-                    if (!kg_remote_read(task, nl_addr, &nl, sizeof(nl), &nread))
+                    if (!kg_remote_read(task, nl_addr, &nl,
+                                        sizeof(nl), &nread))
                         break;
                     if (nl.n_un.n_strx == 0)
                         continue;
-                    gchar symname[257] = {0};
+                    gchar symname[257];
+                    memset(symname, 0, sizeof(symname));
                     if (!kg_remote_read(task,
-                                        image_base + sc.stroff + nl.n_un.n_strx,
+                                        image_base + sc.stroff +
+                                        nl.n_un.n_strx,
                                         symname, 256, &nread))
                         continue;
                     symname[256] = '\0';
@@ -324,12 +331,14 @@ kg_injector_inject(KgInjector *inj)
                               inj->payload_path, path_len))
         goto out;
 
-    mach_vm_address_t dlopen_addr = kg_find_symbol_in_task(inj->task, "dlopen");
+    mach_vm_address_t dlopen_addr =
+        kg_find_symbol_in_task(inj->task, "dlopen");
     if (dlopen_addr == 0) {
         g_printerr("dlopen not found\n");
         goto out;
     }
-    g_print("[*] target dlopen = 0x%llx\n", (unsigned long long) dlopen_addr);
+    g_print("[*] target dlopen = 0x%llx\n",
+            (unsigned long long) dlopen_addr);
 
     gpointer args[2] = {
         GSIZE_TO_POINTER(remote_path),
