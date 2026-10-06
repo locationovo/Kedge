@@ -69,7 +69,10 @@ kg_parse_json_string(const gchar **pp)
         return NULL;
     }
     *pp = p + 1;
-    return g_string_free(out, FALSE);
+
+    gchar *result = g_strdup(out->str);
+    g_string_free(out, TRUE);
+    return result;
 }
 
 gboolean
@@ -110,5 +113,7 @@ kg_json_escape(const gchar *src)
                 break;
         }
     }
-    return g_string_free(out, FALSE);
+    gchar *result = g_strdup(out->str);
+    g_string_free(out, TRUE);
+    return result;
 }
