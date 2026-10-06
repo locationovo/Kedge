@@ -162,10 +162,12 @@ kg_cmd_repl(KgContext *ctx)
 
     GError *error = NULL;
     repl->script = gum_script_backend_create_sync(
-        repl->backend, "kedge-repl", bootstrap, NULL, &error);
+        repl->backend, "kedge-repl", bootstrap, NULL, NULL, &error);
     if (repl->script == NULL) {
-        g_printerr("bootstrap failed: %s\n", error->message);
-        g_error_free(error);
+        g_printerr("bootstrap failed: %s\n",
+                   error ? error->message : "unknown");
+        if (error)
+            g_error_free(error);
         g_free(repl);
         return 1;
     }
@@ -175,7 +177,9 @@ kg_cmd_repl(KgContext *ctx)
     g_signal_connect(repl->script, "error",
                      G_CALLBACK(kg_on_repl_error), repl);
 
-    if (!gum_script_load_sync(repl->script, NULL, &error)) {
+    error = NULL;
+    gum_script_load_sync(repl->script, &error);
+    if (error != NULL) {
         g_printerr("load failed: %s\n", error->message);
         g_error_free(error);
         g_object_unref(repl->script);
@@ -205,8 +209,9 @@ kg_cmd_repl(KgContext *ctx)
         gchar *wrapped = kg_wrap_input(line);
         g_free(line);
 
+        error = NULL;
         GumScript *one = gum_script_backend_create_sync(
-            repl->backend, "repl-once", wrapped, NULL, &error);
+            repl->backend, "repl-once", wrapped, NULL, NULL, &error);
         g_free(wrapped);
 
         if (one != NULL) {
@@ -214,23 +219,27 @@ kg_cmd_repl(KgContext *ctx)
                              G_CALLBACK(kg_on_repl_message), repl);
             g_signal_connect(one, "error",
                              G_CALLBACK(kg_on_repl_error), repl);
-            if (!gum_script_load_sync(one, NULL, &error)) {
+            error = NULL;
+            gum_script_load_sync(one, &error);
+            if (error != NULL) {
                 g_printerr("[eval error] %s\n", error->message);
                 g_error_free(error);
                 error = NULL;
-            } else {
-                gum_script_unload_sync(one, NULL, NULL);
             }
+            gum_script_unload_sync(one, NULL);
             g_object_unref(one);
         } else {
-            g_printerr("[create error] %s\n", error->message);
-            g_error_free(error);
-            error = NULL;
+            g_printerr("[create error] %s\n",
+                       error ? error->message : "unknown");
+            if (error) {
+                g_error_free(error);
+                error = NULL;
+            }
         }
     }
 
     g_print("[*] REPL exiting\n");
-    gum_script_unload_sync(repl->script, NULL, NULL);
+    gum_script_unload_sync(repl->script, NULL);
     g_object_unref(repl->script);
     g_free(repl);
     return 0;
