@@ -3,9 +3,10 @@
 static void
 kg_print_module(const GumModule *m, gpointer user_data)
 {
-    const GumMemoryRange *range = gum_module_get_range(m);
-    const gchar *path = gum_module_get_path(m);
-    const gchar *name = gum_module_get_name(m);
+    GumModule *module = (GumModule *) m;
+    const GumMemoryRange *range = gum_module_get_range(module);
+    const gchar *path = gum_module_get_path(module);
+    const gchar *name = gum_module_get_name(module);
 
     if (range != NULL) {
         g_print("  %p-%p  %s\n",
