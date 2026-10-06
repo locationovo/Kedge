@@ -95,8 +95,9 @@ kg_cmd_trace(KgContext *ctx)
     gum_interceptor_begin_transaction(ic);
 
     GumApiResolver *resolver = gum_api_resolver_make("module");
-    resolver->enumerate_matches(resolver, ctx->argv[0],
-                                (GumFoundApiFunc) kg_on_api_match, NULL);
+    
+    gum_api_resolver_enumerate_matches(resolver, ctx->argv[0],
+                                       (GumFoundApiFunc) kg_on_api_match, NULL);
 
     gum_interceptor_end_transaction(ic);
     g_object_unref(resolver);
