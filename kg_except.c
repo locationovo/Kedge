@@ -2,13 +2,14 @@
 
 static GumExceptor *g_exceptor = NULL;
 
-static void
+static gboolean
 kg_on_exception(GumExceptionDetails *d, gpointer user_data)
 {
     gchar *s = gum_exception_details_to_string(d);
     g_print("[exception] type=%d addr=%p tid=%u\n%s\n",
             d->type, d->address, d->thread_id, s);
     g_free(s);
+    return TRUE;
 }
 
 int

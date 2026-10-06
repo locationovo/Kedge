@@ -5,12 +5,14 @@ typedef struct {
     gint count;
 } KgScanCtx;
 
-static void
-kg_on_match(gpointer address, gsize size, gpointer user_data)
+static gboolean
+kg_on_match(GumAddress address, gsize size, gpointer user_data)
 {
     KgScanCtx *sc = user_data;
-    g_print("[match] %p  (%zu bytes)\n", address, size);
+    g_print("[match] %p  (%zu bytes)\n",
+            GSIZE_TO_POINTER(address), size);
     sc->count++;
+    return TRUE;
 }
 
 static gboolean
@@ -86,7 +88,8 @@ kg_cmd_patch(KgContext *ctx)
         return 1;
     }
 
-    gpointer target = GSIZE_TO_POINTER(g_ascii_strtoull(ctx->argv[0], NULL, 16));
+    gpointer target = GSIZE_TO_POINTER(
+        g_ascii_strtoull(ctx->argv[0], NULL, 16));
     const gchar *hex = ctx->argv[1];
     gsize len = strlen(hex) / 2;
     if (len == 0) {

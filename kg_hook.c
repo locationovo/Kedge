@@ -47,7 +47,7 @@ kg_on_leave(GumInvocationContext *ic, gpointer user_data)
     g_print("[leave] %s -> %p\n", h->name, ret);
 }
 
-static void
+static gboolean
 kg_on_api_match(const GumApiDetails *d, gpointer user_data)
 {
     KgHookCtx *h = g_new0(KgHookCtx, 1);
@@ -62,6 +62,7 @@ kg_on_api_match(const GumApiDetails *d, gpointer user_data)
     KgHookEntry *e = g_new0(KgHookEntry, 1);
     e->listener = listener;
     g_ptr_array_add(g_hook_entries, e);
+    return TRUE;
 }
 
 static gboolean

@@ -1,9 +1,10 @@
 #include "kg.h"
 
-static void
+static gboolean
 kg_on_func(const GumFunctionDetails *d, gpointer user_data)
 {
     g_print("%p  %s  (%d args)\n", d->address, d->name, d->num_arguments);
+    return TRUE;
 }
 
 int
