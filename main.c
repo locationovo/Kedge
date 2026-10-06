@@ -44,7 +44,9 @@ main(int argc, char **argv)
     for (const KgCmd *c = cmds; c->name; c++) {
         if (g_strcmp0(argv[1], c->name) == 0) {
             ret = c->fn(&ctx);
-            found = TRUE }
+            found = TRUE;
+            break;
+        }
     }
 
     if (!found) {
