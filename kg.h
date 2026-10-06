@@ -25,6 +25,7 @@ typedef struct {
 
 int kg_cmd_ps(KgContext *ctx);
 int kg_cmd_trace(KgContext *ctx);
+int kg_cmd_stalker(KgContext *ctx);
 int kg_cmd_discover(KgContext *ctx);
 int kg_cmd_scan(KgContext *ctx);
 int kg_cmd_patch(KgContext *ctx);

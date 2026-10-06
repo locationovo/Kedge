@@ -8,6 +8,7 @@ typedef struct {
 static const KgCmd cmds[] = {
     { "ps", kg_cmd_ps },
     { "trace", kg_cmd_trace },
+    { "stalker", kg_cmd_stalker },
     { "discover", kg_cmd_discover },
     { "scan", kg_cmd_scan },
     { "patch", kg_cmd_patch },

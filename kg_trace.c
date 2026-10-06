@@ -58,7 +58,7 @@ kg_exclude_module(GumStalker *stalker, GumModule *m)
 }
 
 int
-kg_cmd_trace(KgContext *ctx)
+kg_cmd_stalker(KgContext *ctx)
 {
     KgTrace *t = g_new0(KgTrace, 1);
     t->stalker = gum_stalker_new();
