@@ -39,8 +39,12 @@ jobs:
           cp glib-2.75.0/glib/glib.h include/glib-2.0/glib.h
           cp -R glib-2.75.0/glib/deprecated include/glib-2.0/glib/ 2>/dev/null || true
           cp glibconfig.h include/glib-2.0/glibconfig.h
-          ls -la include/glib-2.0/ | head
-          ls -la include/glib-2.0/glib/ | head
+          sed -e 's/@GLIB_MAJOR_VERSION@/2/g' \
+              -e 's/@GLIB_MINOR_VERSION@/75/g' \
+              -e 's/@GLIB_MICRO_VERSION@/0/g' \
+              glib-2.75.0/glib/gversionmacros.h.in \
+              > include/glib-2.0/glib/gversionmacros.h
+          ls -la include/glib-2.0/glib/gversionmacros.h
 
       - name: Build
         run: |
