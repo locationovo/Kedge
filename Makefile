@@ -27,8 +27,10 @@ all: $(BIN) kedge-repl payload
 $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-kedge-repl: kg_repl_main.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-no_fixup_chains -o $@ kg_repl_main.c $(LIBSJS)
+kedge-repl: kg_repl_jsc.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-no_fixup_chains \
+	    -framework JavaScriptCore \
+	    -o $@ kg_repl_jsc.c $(LIBS)
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
