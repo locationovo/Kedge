@@ -30,21 +30,16 @@ jobs:
           find . -name 'frida-gumjs.h' -not -path './include/*' -exec cp {} include/ \;
           find . -name 'libfrida-gumjs.a' -not -path './lib/*' -exec cp {} lib/ \;
 
-      - name: Download GLib 2.75 headers
+      - name: Download GLib headers
         run: |
-          curl -sLO https://download.gnome.org/sources/glib/2.75/glib-2.75.0.tar.xz
-          tar xf glib-2.75.0.tar.xz
-          mkdir -p include/glib-2.0/glib
-          cp glib-2.75.0/glib/*.h include/glib-2.0/glib/
-          cp glib-2.75.0/glib/glib.h include/glib-2.0/glib.h
-          cp -R glib-2.75.0/glib/deprecated include/glib-2.0/glib/ 2>/dev/null || true
+          curl -sLO https://snapshot.debian.org/archive/debian/20230611T000000Z/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
+          ar x libglib2.0-dev_2.74.6-2_arm64.deb
+          mkdir -p extract
+          tar -C extract -xf data.tar.xz
+          mkdir -p include/glib-2.0
+          cp -R extract/usr/include/glib-2.0/glib include/glib-2.0/
+          cp extract/usr/include/glib-2.0/glib.h include/glib-2.0/glib.h
           cp glibconfig.h include/glib-2.0/glibconfig.h
-          sed -e 's/@GLIB_MAJOR_VERSION@/2/g' \
-              -e 's/@GLIB_MINOR_VERSION@/75/g' \
-              -e 's/@GLIB_MICRO_VERSION@/0/g' \
-              glib-2.75.0/glib/gversionmacros.h.in \
-              > include/glib-2.0/glib/gversionmacros.h
-          ls -la include/glib-2.0/glib/gversionmacros.h
 
       - name: Build
         run: |
