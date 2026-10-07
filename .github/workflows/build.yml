@@ -32,14 +32,26 @@ jobs:
 
       - name: Download GLib headers
         run: |
-          curl -sLO http://deb.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
-          ar x libglib2.0-dev_2.74.6-2_arm64.deb
+          SNAPSHOT=20240101T000000Z
+          PKG=libglib2.0-dev_2.74.6-2_arm64.deb
+          URL="https://snapshot.debian.org/archive/debian/${SNAPSHOT}/pool/main/g/glib2.0/${PKG}"
+          curl -sSL -o glib.deb "$URL"
+          file glib.deb
+          if ! file glib.deb | grep -q 'Debian binary package'; then
+            echo "wrong file type, trying deb.debian.org"
+            curl -sSL -o glib.deb \
+              "http://deb.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2+deb12u3_arm64.deb"
+            file glib.deb
+          fi
           mkdir -p extract
-          tar -C extract -xf data.tar.xz
+          dpkg-deb -x glib.deb extract
           mkdir -p include/glib-2.0
           cp -R extract/usr/include/glib-2.0/glib include/glib-2.0/
           cp extract/usr/include/glib-2.0/glib.h include/glib-2.0/glib.h
           find extract -name glibconfig.h -exec cp {} include/glib-2.0/glibconfig.h \;
+          echo "--- glibconfig.h ---"
+          ls -la include/glib-2.0/glibconfig.h
+          grep -E "G_BYTE_ORDER|GLIB_SIZEOF_LONG|typedef int GPid|typedef.*GPid" include/glib-2.0/glibconfig.h | head
 
       - name: Build
         run: |
