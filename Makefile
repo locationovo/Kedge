@@ -9,13 +9,13 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
-LIBS    := -L./lib -lfrida-gum -lfrida-gumjs \
-           -lpthread -ldl -lm -lresolv
+LIBS    := -L./lib -lfrida-gum \
+           -lpthread -ldl -lm -lresolv -lc++ -lobjc
 
 BIN   := kedge
 SRCS  := main.c kg_util.c kg_process.c kg_hook.c kg_trace.c \
          kg_memory.c kg_discover.c kg_cloak.c kg_except.c \
-         kg_backtracer.c kg_memmon.c kg_load.c kg_inject.c kg_repl.c
+         kg_backtracer.c kg_memmon.c kg_load.c kg_inject.c
 OBJS  := $(SRCS:.c=.o)
 
 all: $(BIN) payload

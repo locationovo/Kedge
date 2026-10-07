@@ -3,7 +3,6 @@
 
 #include <glib.h>
 #include <frida-gum.h>
-#include <frida-gumjs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +37,5 @@ int kg_cmd_watch(KgContext *ctx);
 int kg_cmd_bt(KgContext *ctx);
 int kg_cmd_load(KgContext *ctx);
 int kg_cmd_inject(KgContext *ctx);
-int kg_cmd_repl(KgContext *ctx);
 
 #endif
