@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <dlfcn.h>
 
-
 static JSClassRef g_ptrClass = NULL;
 
 static JSValueRef
@@ -192,7 +191,6 @@ static const JSClassDefinition g_ptrDef = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-
 static void
 set_str(JSContextRef ctx, JSObjectRef obj, const char *key, const char *val)
 {
@@ -222,6 +220,24 @@ set_ptr(JSContextRef ctx, JSObjectRef obj, const char *key, uint64_t val)
     JSStringRelease(k);
 }
 
+static JSValueRef
+js_print(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
+         size_t argc, const JSValueRef argv[], JSValueRef *exc)
+{
+    for (size_t i = 0; i < argc; i++) {
+        JSStringRef s = JSValueToStringCopy(ctx, argv[i], NULL);
+        size_t n = JSStringGetMaximumUTF8CStringSize(s);
+        char *buf = g_malloc(n);
+        JSStringGetUTF8CString(s, buf, n);
+        g_print("%s", buf);
+        g_free(buf);
+        JSStringRelease(s);
+        if (i < argc - 1) g_print(" ");
+    }
+    g_print("\n");
+    fflush(stdout);
+    return JSValueMakeUndefined(ctx);
+}
 
 static JSValueRef
 js_process_get(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
@@ -269,7 +285,6 @@ js_process_enumerateModules(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     gum_process_enumerate_modules(mod_enum_cb, &e);
     return arr;
 }
-
 
 static JSValueRef
 js_module_getExportByName(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
@@ -322,8 +337,6 @@ js_module_getBaseAddress(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     if (r == NULL) return JSValueMakeNull(ctx);
     return kg_ptr_make(ctx, r->base_address);
 }
-
-/* ---------- Memory ---------- */
 
 static JSValueRef
 js_memory_readByteArray(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
@@ -381,8 +394,6 @@ js_memory_writeByteArray(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     return JSValueMakeBoolean(ctx, ok);
 }
 
-/* ---------- 注入全局 ---------- */
-
 static void
 kg_install(JSGlobalContextRef ctx, const char *name,
            JSObjectCallAsFunctionCallback fn)
@@ -413,9 +424,13 @@ kg_eval(JSGlobalContextRef ctx, const char *src)
 }
 
 static const char *g_bootstrap =
-    "function __kgwrap(o) { return o; }"
-    "globalThis.hexdump = function(addr, len) {"
-    "  return Memory_readByteArray(addr, len);"
+    "globalThis.console = {"
+    "  log: function() {"
+    "    var parts = [];"
+    "    for (var i = 0; i < arguments.length; i++)"
+    "      parts.push(String(arguments[i]));"
+    "    __js_print(parts.join(' '));"
+    "  }"
     "};"
     "globalThis.Module = {"
     "  getExportByName: Module_getExportByName,"
@@ -437,6 +452,7 @@ main(int argc, char **argv)
 
     JSGlobalContextRef ctx = JSGlobalContextCreate(NULL);
 
+    kg_install(ctx, "__js_print", js_print);
     kg_install(ctx, "Process_get", js_process_get);
     kg_install(ctx, "Process_enumerateModules", js_process_enumerateModules);
     kg_install(ctx, "Module_getExportByName", js_module_getExportByName);
