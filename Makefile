@@ -28,7 +28,7 @@ $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 kedge-repl: kg_repl_main.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ kg_repl_main.c $(LIBSJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-no_fixup_chains -o $@ kg_repl_main.c $(LIBSJS)
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
