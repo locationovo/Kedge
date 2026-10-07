@@ -25,10 +25,20 @@ static const KgCmd cmds[] = {
     { NULL, NULL }
 };
 
+__attribute__((constructor))
+static void
+kg_before_main(void)
+{
+    write(2, "[kedge] before main\n", 20);
+}
+
 int
 main(int argc, char **argv)
 {
+    write(2, "[kedge] in main\n", 16);
+
     gum_init_embedded();
+    write(2, "[kedge] gum_init_embedded done\n", 31);
 
     if (argc < 2) {
         g_printerr("usage: kedge <");
