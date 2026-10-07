@@ -9,6 +9,7 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
+
 LIBS    := -L./lib -lfrida-gum \
            -lpthread -ldl -lm -lresolv -lc++ -lobjc
 
@@ -18,7 +19,7 @@ SRCS  := main.c kg_util.c kg_process.c kg_hook.c kg_trace.c \
          kg_backtracer.c kg_memmon.c kg_load.c kg_inject.c
 OBJS  := $(SRCS:.c=.o)
 
-all: $(BIN) kedge-repl payload
+all: $(BIN) kedge-repl kedge-remote payload
 
 $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -27,6 +28,11 @@ kedge-repl: kg_repl_main.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-no_fixup_chains \
 	    -framework JavaScriptCore \
 	    -o $@ kg_repl_main.c $(LIBS)
+
+kedge-remote: kg_remote.c
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	    -o $@ kg_remote.c \
+	    -lpthread -ldl -lm
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -40,4 +46,4 @@ payload: kg_agent.c
 	      -lpthread -ldl -lm
 
 clean:
-	rm -f $(OBJS) $(BIN) kedge-repl kg_agent.dylib
+	rm -f $(OBJS) $(BIN) kedge-repl kedge-remote kg_agent.dylib

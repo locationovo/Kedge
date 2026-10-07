@@ -62,6 +62,7 @@ jobs:
         run: |
           ldid -Sentitlements.plist kedge
           ldid -Sentitlements.plist kedge-repl
+          ldid -Sentitlements.plist kedge-remote
           ldid -Sentitlements.plist kg_agent.dylib
 
       - name: Package .deb
@@ -71,6 +72,7 @@ jobs:
           mkdir -p pkg/var/jb/usr/local/lib
           cp kedge pkg/var/jb/usr/local/bin/kedge
           cp kedge-repl pkg/var/jb/usr/local/bin/kedge-repl
+          cp kedge-remote pkg/var/jb/usr/local/bin/kedge-remote
           cp kg_agent.dylib pkg/var/jb/usr/local/lib/kg_agent.dylib
           cat > pkg/DEBIAN/control <<'EOF'
           Package: com.locationovo.kedge
