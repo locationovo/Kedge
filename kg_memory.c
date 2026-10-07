@@ -90,6 +90,19 @@ kg_cmd_patch(KgContext *ctx)
 
     gpointer target = GSIZE_TO_POINTER(
         g_ascii_strtoull(ctx->argv[0], NULL, 16));
+
+    if (!gum_memory_is_readable(target, 1)) {
+        g_printerr("address %p is not readable, refusing to patch\n", target);
+        return 1;
+    }
+
+    GumPageProtection prot = 0;
+    if (!gum_memory_query_protection(target, &prot)) {
+        g_printerr("cannot query protection at %p\n", target);
+        return 1;
+    }
+    g_print("[*] target %p protection=0x%x\n", target, prot);
+
     const gchar *hex = ctx->argv[1];
     gsize len = strlen(hex) / 2;
     if (len == 0) {

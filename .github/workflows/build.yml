@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: brew install ldid
+        run: brew install ldid dpkg
 
       - name: Download Frida devkits
         run: |
@@ -32,8 +32,7 @@ jobs:
 
       - name: Download GLib headers
         run: |
-          curl -sLO https://snapshot.debian.org/archive/debian/20230611T000000Z/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
-          ls -la libglib2.0-dev_2.74.6-2_arm64.deb
+          curl -sLO http://deb.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
           ar x libglib2.0-dev_2.74.6-2_arm64.deb
           mkdir -p extract
           tar -C extract -xf data.tar.xz
@@ -41,9 +40,6 @@ jobs:
           cp -R extract/usr/include/glib-2.0/glib include/glib-2.0/
           cp extract/usr/include/glib-2.0/glib.h include/glib-2.0/glib.h
           find extract -name glibconfig.h -exec cp {} include/glib-2.0/glibconfig.h \;
-          echo "--- glibconfig.h ---"
-          ls -la include/glib-2.0/glibconfig.h
-          grep -E "G_BYTE_ORDER|GLIB_SIZEOF_LONG|GPid" include/glib-2.0/glibconfig.h | head
 
       - name: Build
         run: |
@@ -51,10 +47,37 @@ jobs:
           make SDK_PATH="$SDK_PATH"
 
       - name: Sign
-        run: ldid -Sentitlements.plist kedge
+        run: |
+          ldid -Sentitlements.plist kedge
+          ldid -S libkedge_repl.dylib
+          ldid -S kg_agent.dylib
+
+      - name: Package .deb
+        run: |
+          mkdir -p pkg/DEBIAN
+          mkdir -p pkg/var/jb/usr/local/bin
+          mkdir -p pkg/var/jb/usr/local/lib
+          cp kedge pkg/var/jb/usr/local/bin/kedge
+          cp libkedge_repl.dylib pkg/var/jb/usr/local/lib/libkedge_repl.dylib
+          cp kg_agent.dylib pkg/var/jb/usr/local/lib/kg_agent.dylib
+          cat > pkg/DEBIAN/control <<'EOF'
+          Package: com.locationovo.kedge
+          Name: kedge
+          Version: 0.1.0
+          Architecture: iphoneos-arm64
+          Description: Local Frida-based instrumentation client for iOS
+          Maintainer: locationovo
+          Author: locationovo
+          Section: Utilities
+          Priority: optional
+          Depends: firmware (>= 14.0)
+          EOF
+          chmod +x pkg/var/jb/usr/local/bin/kedge
+          dpkg-deb -Zgzip --build pkg kedge_0.1.0_iphoneos-arm64.deb
+          ls -la kedge_0.1.0_iphoneos-arm64.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kedge
-          path: kedge
+          name: kedge-deb
+          path: kedge_0.1.0_iphoneos-arm64.deb

@@ -18,7 +18,7 @@ SRCS  := main.c kg_util.c kg_process.c kg_hook.c kg_trace.c \
          kg_backtracer.c kg_memmon.c kg_load.c kg_inject.c
 OBJS  := $(SRCS:.c=.o)
 
-all: $(BIN) payload
+all: $(BIN) payload repl-dylib
 
 $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -34,5 +34,13 @@ payload: kg_agent.c
 	      -framework Foundation -framework CoreFoundation \
 	      -lpthread -ldl -lm
 
+repl-dylib: kg_repl_dylib.c
+	$(CC) -shared -fPIC -o libkedge_repl.dylib kg_repl_dylib.c \
+	      -I./include -I./include/glib-2.0 \
+	      -L./lib -lfrida-gum -lfrida-gumjs \
+	      -target $(TARGET) -isysroot $(SDK_PATH) \
+	      -framework Foundation -framework CoreFoundation \
+	      -lpthread -ldl -lm -lresolv
+
 clean:
-	rm -f $(OBJS) $(BIN) kg_agent.dylib
+	rm -f $(OBJS) $(BIN) kg_agent.dylib libkedge_repl.dylib
