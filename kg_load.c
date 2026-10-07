@@ -1,6 +1,33 @@
 #include "kg.h"
 #include <dlfcn.h>
-#include <mach-o/dyld.h>
+
+static gchar *
+kg_find_jbroot(void)
+{
+    const gchar *bases[] = {
+        "/private/var/containers/Bundle/Application",
+        "/var/containers/Bundle/Application",
+        NULL
+    };
+
+    for (int i = 0; bases[i]; i++) {
+        GDir *dir = g_dir_open(bases[i], 0, NULL);
+        if (dir == NULL)
+            continue;
+        const gchar *name;
+        gchar *found = NULL;
+        while ((name = g_dir_read_name(dir)) != NULL) {
+            if (g_str_has_prefix(name, ".jbroot-")) {
+                found = g_strdup_printf("%s/%s", bases[i], name);
+                break;
+            }
+        }
+        g_dir_close(dir);
+        if (found != NULL)
+            return found;
+    }
+    return NULL;
+}
 
 static gchar *
 kg_resolve_jbroot_path(const gchar *path)
@@ -8,21 +35,12 @@ kg_resolve_jbroot_path(const gchar *path)
     if (!g_str_has_prefix(path, "/var/jb/"))
         return g_strdup(path);
 
-    char exe[4096];
-    uint32_t size = sizeof(exe);
-    if (_NSGetExecutablePath(exe, &size) != 0)
+    gchar *jbroot = kg_find_jbroot();
+    if (jbroot == NULL)
         return g_strdup(path);
 
-    const gchar *marker = strstr(exe, "/.jbroot-");
-    if (marker == NULL)
-        return g_strdup(path);
-
-    const gchar *after = strchr(marker + 1, '/');
-    if (after == NULL)
-        return g_strdup(path);
-
-    gsize prefix_len = (gsize)(after - exe);
-    gchar *resolved = g_strdup_printf("%.*s%s", (int) prefix_len, exe, path + 8);
+    gchar *resolved = g_strdup_printf("%s%s", jbroot, path + 7);
+    g_free(jbroot);
     return resolved;
 }
 
@@ -39,6 +57,7 @@ kg_cmd_load(KgContext *ctx)
 
     gchar *path = kg_resolve_jbroot_path(raw_path);
     g_print("[*] resolved path: %s\n", path);
+    fflush(stdout);
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (handle == NULL) {
@@ -58,6 +77,7 @@ kg_cmd_load(KgContext *ctx)
             return 1;
         }
         g_print("[*] calling %s()\n", entry);
+        fflush(stdout);
         fn();
         g_print("[*] %s() returned\n", entry);
     }
