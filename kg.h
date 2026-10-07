@@ -1,6 +1,7 @@
 #ifndef KG_H
 #define KG_H
 
+#include <glib.h>
 #include <frida-gum.h>
 #include <frida-gumjs.h>
 #include <stdio.h>

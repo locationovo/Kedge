@@ -30,6 +30,16 @@ jobs:
           find . -name 'frida-gumjs.h' -not -path './include/*' -exec cp {} include/ \;
           find . -name 'libfrida-gumjs.a' -not -path './lib/*' -exec cp {} lib/ \;
 
+      - name: Download GLib 2.75 headers
+        run: |
+          curl -sLO https://download.gnome.org/sources/glib/2.75/glib-2.75.0.tar.xz
+          tar xf glib-2.75.0.tar.xz
+          mkdir -p include/glib-2.0
+          cp glib-2.75.0/glib/*.h include/glib-2.0/
+          cp -R glib-2.75.0/glib/deprecated include/glib-2.0/ 2>/dev/null || true
+          cp glibconfig.h include/glib-2.0/glibconfig.h
+          ls -la include/glib-2.0/ | head -20
+
       - name: Build
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)

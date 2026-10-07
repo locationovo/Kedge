@@ -4,7 +4,8 @@ SDK_PATH ?= $(shell xcrun --sdk iphoneos --show-sdk-path)
 
 CC      := xcrun --sdk iphoneos clang
 
-CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter -I./include \
+CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter \
+           -I./include -I./include/glib-2.0 \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
@@ -27,7 +28,7 @@ $(BIN): $(OBJS)
 
 payload: kg_agent.c
 	$(CC) -shared -fPIC -o kg_agent.dylib kg_agent.c \
-	      -I./include \
+	      -I./include -I./include/glib-2.0 \
 	      -L./lib -lfrida-gum \
 	      -target $(TARGET) -isysroot $(SDK_PATH) \
 	      -framework Foundation -framework CoreFoundation \
