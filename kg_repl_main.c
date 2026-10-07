@@ -495,7 +495,7 @@ main(int argc, char **argv)
         gchar *expr = g_strdup_printf(
             "(function(){try{"
             "var __ev=eval;"
-            "var __r=__ev(%s);"
+            "var __r=__ev(\"%s\");"
             "if(__r!==undefined)console.log(JSON.stringify(__r));"
             "}catch(e){console.log('Error: '+e);}})();",
             escaped);
