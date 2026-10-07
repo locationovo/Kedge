@@ -1,5 +1,30 @@
 #include "kg.h"
 #include <dlfcn.h>
+#include <mach-o/dyld.h>
+
+static gchar *
+kg_resolve_jbroot_path(const gchar *path)
+{
+    if (!g_str_has_prefix(path, "/var/jb/"))
+        return g_strdup(path);
+
+    char exe[4096];
+    uint32_t size = sizeof(exe);
+    if (_NSGetExecutablePath(exe, &size) != 0)
+        return g_strdup(path);
+
+    const gchar *marker = strstr(exe, "/.jbroot-");
+    if (marker == NULL)
+        return g_strdup(path);
+
+    const gchar *after = strchr(marker + 1, '/');
+    if (after == NULL)
+        return g_strdup(path);
+
+    gsize prefix_len = (gsize)(after - exe);
+    gchar *resolved = g_strdup_printf("%.*s%s", (int) prefix_len, exe, path + 8);
+    return resolved;
+}
 
 int
 kg_cmd_load(KgContext *ctx)
@@ -9,16 +34,21 @@ kg_cmd_load(KgContext *ctx)
         return 1;
     }
 
-    const gchar *path = ctx->argv[0];
+    const gchar *raw_path = ctx->argv[0];
     const gchar *entry = (ctx->argc >= 2) ? ctx->argv[1] : "init";
+
+    gchar *path = kg_resolve_jbroot_path(raw_path);
+    g_print("[*] resolved path: %s\n", path);
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (handle == NULL) {
         g_printerr("dlopen failed: %s\n", dlerror());
+        g_free(path);
         return 1;
     }
 
     g_print("[*] loaded %s (handle=%p)\n", path, handle);
+    g_free(path);
 
     if (entry != NULL) {
         void (*fn)(void) = (void (*)(void)) dlsym(handle, entry);
