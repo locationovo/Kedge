@@ -443,6 +443,23 @@ static const char *g_bootstrap =
     "globalThis.Process = Process_get();"
     "Process.enumerateModules = Process_enumerateModules;";
 
+static gchar *
+kg_js_escape(const char *src)
+{
+    GString *s = g_string_new(NULL);
+    for (const char *p = src; *p; p++) {
+        switch (*p) {
+            case '\\': g_string_append(s, "\\\\"); break;
+            case '"':  g_string_append(s, "\\\""); break;
+            case '\n': g_string_append(s, "\\n");  break;
+            case '\r': g_string_append(s, "\\r");  break;
+            case '\t': g_string_append(s, "\\t");  break;
+            default:   g_string_append_c(s, *p);
+        }
+    }
+    return g_string_free(s, FALSE);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -474,13 +491,17 @@ main(int argc, char **argv)
         if (strcmp(line, "exit") == 0 || strcmp(line, "quit") == 0) break;
         if (strlen(line) == 0) continue;
 
-        char expr[16384];
-        snprintf(expr, sizeof(expr),
-                 "(function(){try{var __r=eval(%s);"
-                 "if(__r!==undefined)console.log(JSON.stringify(__r));"
-                 "}catch(e){console.log('Error: '+e);}})();",
-                 line);
+        gchar *escaped = kg_js_escape(line);
+        gchar *expr = g_strdup_printf(
+            "(function(){try{"
+            "var __ev=eval;"
+            "var __r=__ev(%s);"
+            "if(__r!==undefined)console.log(JSON.stringify(__r));"
+            "}catch(e){console.log('Error: '+e);}})();",
+            escaped);
+        g_free(escaped);
         kg_eval(ctx, expr);
+        g_free(expr);
     }
 
     JSGlobalContextRelease(ctx);
