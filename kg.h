@@ -3,7 +3,6 @@
 
 #include <frida-gum.h>
 #include <frida-gumjs.h>
-#include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

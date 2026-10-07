@@ -15,8 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          brew install glib ldid pkg-config
+        run: brew install ldid
 
       - name: Download Frida devkits
         run: |
@@ -26,10 +25,10 @@ jobs:
           curl -sLO https://github.com/frida/frida/releases/download/${FRIDA_VERSION}/frida-gumjs-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
           tar xf frida-gum-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
           tar xf frida-gumjs-devkit-${FRIDA_VERSION}-ios-arm64.tar.xz
-          find . -name 'frida-gum.h' -exec cp {} include/ \;
-          find . -name 'libfrida-gum.a' -exec cp {} lib/ \;
-          find . -name 'frida-gumjs.h' -exec cp {} include/ \;
-          find . -name 'libfrida-gumjs.a' -exec cp {} lib/ \;
+          find . -name 'frida-gum.h' -not -path './include/*' -exec cp {} include/ \;
+          find . -name 'libfrida-gum.a' -not -path './lib/*' -exec cp {} lib/ \;
+          find . -name 'frida-gumjs.h' -not -path './include/*' -exec cp {} include/ \;
+          find . -name 'libfrida-gumjs.a' -not -path './lib/*' -exec cp {} lib/ \;
 
       - name: Build
         run: |

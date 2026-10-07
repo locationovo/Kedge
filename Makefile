@@ -3,10 +3,8 @@ TARGET  := arm64-apple-ios14.0
 SDK_PATH ?= $(shell xcrun --sdk iphoneos --show-sdk-path)
 
 CC      := xcrun --sdk iphoneos clang
-GLIB_CFLAGS := $(shell pkg-config --cflags glib-2.0)
 
 CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter -I./include \
-           $(GLIB_CFLAGS) \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
@@ -29,7 +27,7 @@ $(BIN): $(OBJS)
 
 payload: kg_agent.c
 	$(CC) -shared -fPIC -o kg_agent.dylib kg_agent.c \
-	      -I./include $(GLIB_CFLAGS) \
+	      -I./include \
 	      -L./lib -lfrida-gum \
 	      -target $(TARGET) -isysroot $(SDK_PATH) \
 	      -framework Foundation -framework CoreFoundation \
