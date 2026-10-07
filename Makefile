@@ -9,7 +9,11 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
+
 LIBS    := -L./lib -lfrida-gum \
+           -lpthread -ldl -lm -lresolv -lc++ -lobjc
+
+LIBSJS  := -L./lib -lfrida-gumjs -lfrida-gum \
            -lpthread -ldl -lm -lresolv -lc++ -lobjc
 
 BIN   := kedge
@@ -18,10 +22,13 @@ SRCS  := main.c kg_util.c kg_process.c kg_hook.c kg_trace.c \
          kg_backtracer.c kg_memmon.c kg_load.c kg_inject.c
 OBJS  := $(SRCS:.c=.o)
 
-all: $(BIN) payload repl-dylib
+all: $(BIN) kedge-repl payload
 
 $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+kedge-repl: kg_repl_main.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ kg_repl_main.c $(LIBSJS)
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -34,13 +41,5 @@ payload: kg_agent.c
 	      -framework Foundation -framework CoreFoundation \
 	      -lpthread -ldl -lm
 
-repl-dylib: kg_repl_dylib.c
-	$(CC) -shared -fPIC -o libkedge_repl.dylib kg_repl_dylib.c \
-	      -I./include -I./include/glib-2.0 \
-	      -L./lib -lfrida-gum -lfrida-gumjs \
-	      -target $(TARGET) -isysroot $(SDK_PATH) \
-	      -framework Foundation -framework CoreFoundation \
-	      -lpthread -ldl -lm -lresolv
-
 clean:
-	rm -f $(OBJS) $(BIN) kg_agent.dylib libkedge_repl.dylib
+	rm -f $(OBJS) $(BIN) kedge-repl kg_agent.dylib

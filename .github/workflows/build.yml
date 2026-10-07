@@ -70,7 +70,7 @@ jobs:
           mkdir -p pkg/var/jb/usr/local/bin
           mkdir -p pkg/var/jb/usr/local/lib
           cp kedge pkg/var/jb/usr/local/bin/kedge
-          cp libkedge_repl.dylib pkg/var/jb/usr/local/lib/libkedge_repl.dylib
+          cp kedge-repl pkg/var/jb/usr/local/bin/kedge-repl
           cp kg_agent.dylib pkg/var/jb/usr/local/lib/kg_agent.dylib
           cat > pkg/DEBIAN/control <<'EOF'
           Package: com.locationovo.kedge
@@ -85,8 +85,8 @@ jobs:
           Depends: firmware (>= 14.0)
           EOF
           chmod +x pkg/var/jb/usr/local/bin/kedge
+          chmod +x pkg/var/jb/usr/local/bin/kedge-repl
           dpkg-deb -Zgzip --build pkg kedge_0.1.0_iphoneos-arm64.deb
-          ls -la kedge_0.1.0_iphoneos-arm64.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
