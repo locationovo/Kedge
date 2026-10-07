@@ -9,11 +9,7 @@ CFLAGS  := -O2 -fobjc-arc -Wall -Wno-unused-parameter \
            -target $(TARGET) -isysroot $(SDK_PATH)
 LDFLAGS := -framework Foundation -framework CoreFoundation \
            -target $(TARGET) -isysroot $(SDK_PATH)
-
 LIBS    := -L./lib -lfrida-gum \
-           -lpthread -ldl -lm -lresolv -lc++ -lobjc
-
-LIBSJS  := -L./lib -lfrida-gumjs -lfrida-gum \
            -lpthread -ldl -lm -lresolv -lc++ -lobjc
 
 BIN   := kedge
@@ -27,10 +23,10 @@ all: $(BIN) kedge-repl payload
 $(BIN): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-kedge-repl: kg_repl_jsc.c
+kedge-repl: kg_repl_main.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,-no_fixup_chains \
 	    -framework JavaScriptCore \
-	    -o $@ kg_repl_jsc.c $(LIBS)
+	    -o $@ kg_repl_main.c $(LIBS)
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
