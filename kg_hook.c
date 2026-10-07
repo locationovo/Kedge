@@ -82,11 +82,23 @@ kg_hook_signal(int signo)
     (void) r;
 }
 
+static gchar *
+kg_normalize_query(const gchar *raw)
+{
+    if (g_str_has_prefix(raw, "exports:") ||
+        g_str_has_prefix(raw, "imports:") ||
+        g_str_has_prefix(raw, "sections:"))
+        return g_strdup(raw);
+
+    /* 默认按导出符号匹配：exports:*!<pattern>* */
+    return g_strdup_printf("exports:*!%s", raw);
+}
+
 int
 kg_cmd_trace(KgContext *ctx)
 {
     if (ctx->argc < 1) {
-        g_printerr("usage: kedge trace <symbol|glob>\n");
+        g_printerr("usage: kedge trace <symbol|glob|exports:...>\n");
         return 1;
     }
 
@@ -97,10 +109,15 @@ kg_cmd_trace(KgContext *ctx)
 
     GumApiResolver *resolver = gum_api_resolver_make("module");
 
+    gchar *query = kg_normalize_query(ctx->argv[0]);
+    g_print("[*] query: %s\n", query);
+
     GError *error = NULL;
-    gum_api_resolver_enumerate_matches(resolver, ctx->argv[0],
+    gum_api_resolver_enumerate_matches(resolver, query,
                                        (GumFoundApiFunc) kg_on_api_match,
                                        NULL, &error);
+    g_free(query);
+
     if (error != NULL) {
         g_printerr("enumerate_matches failed: %s\n", error->message);
         g_error_free(error);
@@ -111,6 +128,12 @@ kg_cmd_trace(KgContext *ctx)
 
     g_print("[*] %u hooks installed\n", g_hook_entries->len);
 
+    if (g_hook_entries->len == 0) {
+        g_ptr_array_free(g_hook_entries, TRUE);
+        g_hook_entries = NULL;
+        return 1;
+    }
+
     g_hook_loop = g_main_loop_new(NULL, FALSE);
     pipe(g_hook_pipe);
 
@@ -120,6 +143,7 @@ kg_cmd_trace(KgContext *ctx)
     GIOChannel *ch = g_io_channel_unix_new(g_hook_pipe[0]);
     g_io_add_watch(ch, G_IO_IN, kg_hook_pipe_readable, NULL);
 
+    g_print("[*] Ctrl-C to stop\n");
     g_main_loop_run(g_hook_loop);
 
     g_io_channel_unref(ch);
