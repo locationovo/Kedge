@@ -32,6 +32,7 @@ kedge-repl: kg_repl_main.c
 kedge-remote: kg_remote.c
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 	    -o $@ kg_remote.c \
+	    -L./lib -lfrida-gum \
 	    -lpthread -ldl -lm
 
 %.o: %.c kg.h
