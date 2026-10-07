@@ -21,33 +21,40 @@ kg_ptr_addr(JSContextRef ctx, JSValueRef val)
     if (val == NULL) return 0;
     if (JSValueIsNumber(ctx, val))
         return (uint64_t) JSValueToNumber(ctx, val, NULL);
+    if (!JSValueIsObject(ctx, val)) return 0;
     JSObjectRef obj = JSValueToObject(ctx, val, NULL);
     if (obj == NULL) return 0;
     return (uint64_t)(uintptr_t) JSObjectGetPrivate(obj);
 }
 
 static JSValueRef
-kg_ptr_op(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
-          size_t argc, const JSValueRef argv[], JSValueRef *exc, int op)
+kg_ptr_op(JSContextRef ctx, JSObjectRef self, size_t argc,
+          const JSValueRef argv[], int op)
 {
     uint64_t a = (uint64_t)(uintptr_t) JSObjectGetPrivate(self);
     if (argc < 1) return kg_ptr_make(ctx, a);
     uint64_t b = kg_ptr_addr(ctx, argv[0]);
-    uint64_t r = (op == 0) ? a + b : (op == 1) ? a - b :
-                 (op == 2) ? a & b : (op == 3) ? a | b : a ^ b;
+    uint64_t r = 0;
+    switch (op) {
+        case 0: r = a + b; break;
+        case 1: r = a - b; break;
+        case 2: r = a & b; break;
+        case 3: r = a | b; break;
+        case 4: r = a ^ b; break;
+    }
     return kg_ptr_make(ctx, r);
 }
 
 static JSValueRef p_add(JSContextRef c, JSObjectRef f, JSObjectRef s,
-    size_t n, const JSValueRef a[], JSValueRef *e) { return kg_ptr_op(c,f,s,n,a,e,0); }
+    size_t n, const JSValueRef a[], JSValueRef *e) { (void)f; return kg_ptr_op(c,s,n,a,0); }
 static JSValueRef p_sub(JSContextRef c, JSObjectRef f, JSObjectRef s,
-    size_t n, const JSValueRef a[], JSValueRef *e) { return kg_ptr_op(c,f,s,n,a,e,1); }
+    size_t n, const JSValueRef a[], JSValueRef *e) { (void)f; return kg_ptr_op(c,s,n,a,1); }
 static JSValueRef p_and(JSContextRef c, JSObjectRef f, JSObjectRef s,
-    size_t n, const JSValueRef a[], JSValueRef *e) { return kg_ptr_op(c,f,s,n,a,e,2); }
-static JSValueRef p_or(JSContextRef c, JSObjectRef f, JSObjectRef s,
-    size_t n, const JSValueRef a[], JSValueRef *e) { return kg_ptr_op(c,f,s,n,a,e,3); }
+    size_t n, const JSValueRef a[], JSValueRef *e) { (void)f; return kg_ptr_op(c,s,n,a,2); }
+static JSValueRef p_or (JSContextRef c, JSObjectRef f, JSObjectRef s,
+    size_t n, const JSValueRef a[], JSValueRef *e) { (void)f; return kg_ptr_op(c,s,n,a,3); }
 static JSValueRef p_xor(JSContextRef c, JSObjectRef f, JSObjectRef s,
-    size_t n, const JSValueRef a[], JSValueRef *e) { return kg_ptr_op(c,f,s,n,a,e,4); }
+    size_t n, const JSValueRef a[], JSValueRef *e) { (void)f; return kg_ptr_op(c,s,n,a,4); }
 
 static JSValueRef
 p_isNull(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
@@ -92,8 +99,7 @@ p_readU8(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
          size_t argc, const JSValueRef argv[], JSValueRef *exc)
 {
     uint64_t a = (uint64_t)(uintptr_t) JSObjectGetPrivate(self);
-    uint8_t v = *(uint8_t *)(uintptr_t) a;
-    return JSValueMakeNumber(ctx, v);
+    return JSValueMakeNumber(ctx, *(uint8_t *)(uintptr_t) a);
 }
 
 static JSValueRef
@@ -101,8 +107,7 @@ p_readU32(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
           size_t argc, const JSValueRef argv[], JSValueRef *exc)
 {
     uint64_t a = (uint64_t)(uintptr_t) JSObjectGetPrivate(self);
-    uint32_t v = *(uint32_t *)(uintptr_t) a;
-    return JSValueMakeNumber(ctx, v);
+    return JSValueMakeNumber(ctx, *(uint32_t *)(uintptr_t) a);
 }
 
 static JSValueRef
@@ -110,8 +115,7 @@ p_readU64(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
           size_t argc, const JSValueRef argv[], JSValueRef *exc)
 {
     uint64_t a = (uint64_t)(uintptr_t) JSObjectGetPrivate(self);
-    uint64_t v = *(uint64_t *)(uintptr_t) a;
-    return JSValueMakeNumber(ctx, (double) v);
+    return JSValueMakeNumber(ctx, (double) *(uint64_t *)(uintptr_t) a);
 }
 
 static JSValueRef
@@ -119,8 +123,7 @@ p_readPointer(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
               size_t argc, const JSValueRef argv[], JSValueRef *exc)
 {
     uint64_t a = (uint64_t)(uintptr_t) JSObjectGetPrivate(self);
-    uint64_t v = *(uint64_t *)(uintptr_t) a;
-    return kg_ptr_make(ctx, v);
+    return kg_ptr_make(ctx, *(uint64_t *)(uintptr_t) a);
 }
 
 static JSValueRef
@@ -162,36 +165,28 @@ p_writeU64(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     return JSValueMakeUndefined(ctx);
 }
 
-static JSValueRef
-p_writePointer(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
-               size_t argc, const JSValueRef argv[], JSValueRef *exc)
-{
-    return p_writeU64(ctx, fn, self, argc, argv, exc);
-}
-
 static const JSStaticFunction g_ptrMethods[] = {
-    { "add", p_add, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "sub", p_sub, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "and", p_and, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "or",  p_or,  kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "xor", p_xor, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "isNull", p_isNull, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "equals", p_equals, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "toInt32", p_toInt32, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "toString", p_toString, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "readU8", p_readU8, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "readU32", p_readU32, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "readU64", p_readU64, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "readPointer", p_readPointer, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "readUtf8String", p_readUtf8String, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "writeU8", p_writeU8, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "writeU32", p_writeU32, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "writeU64", p_writeU64, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-    { "writePointer", p_writePointer, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "add",             p_add,             kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "sub",             p_sub,             kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "and",             p_and,             kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "or",              p_or,              kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "xor",             p_xor,             kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "isNull",          p_isNull,          kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "equals",          p_equals,          kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "toInt32",         p_toInt32,         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "toString",        p_toString,        kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "readU8",          p_readU8,          kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "readU32",         p_readU32,         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "readU64",         p_readU64,         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "readPointer",     p_readPointer,     kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "readUtf8String",  p_readUtf8String,  kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "writeU8",         p_writeU8,         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "writeU32",        p_writeU32,        kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+    { "writeU64",        p_writeU64,        kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
     { NULL, NULL, 0 }
 };
 
-static JSClassDefinition g_ptrDef = {
+static const JSClassDefinition g_ptrDef = {
     0, kJSClassAttributeNone, "NativePointer", NULL,
     NULL, g_ptrMethods,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
@@ -282,24 +277,32 @@ js_module_getExportByName(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
 {
     if (argc < 2) return JSValueMakeNull(ctx);
 
-    JSStringRef js_mod = JSValueToStringCopy(ctx, argv[0], NULL);
-    JSStringRef js_sym = JSValueToStringCopy(ctx, argv[1], NULL);
-    char mod[256] = {0}, sym[256] = {0};
-    if (js_mod) { JSStringGetUTF8CString(js_mod, mod, sizeof(mod)); JSStringRelease(js_mod); }
-    if (js_sym) { JSStringGetUTF8CString(js_sym, sym, sizeof(sym)); JSStringRelease(js_sym); }
+    char mod[256] = {0};
+    char sym[256] = {0};
 
-    gpointer addr = NULL;
+    if (JSValueIsString(ctx, argv[0])) {
+        JSStringRef js = JSValueToStringCopy(ctx, argv[0], NULL);
+        JSStringGetUTF8CString(js, mod, sizeof(mod));
+        JSStringRelease(js);
+    }
+    {
+        JSStringRef js = JSValueToStringCopy(ctx, argv[1], NULL);
+        JSStringGetUTF8CString(js, sym, sizeof(sym));
+        JSStringRelease(js);
+    }
+
+    GumAddress a = 0;
     if (JSValueIsNull(ctx, argv[0]) || mod[0] == '\0') {
-        addr = gum_module_find_global_export_by_name(sym);
+        a = gum_module_find_global_export_by_name(sym);
     } else {
         GumModule *m = gum_process_find_module_by_name(mod);
         if (m != NULL) {
-            addr = gum_module_find_export_by_name(m, sym);
+            a = gum_module_find_export_by_name(m, sym);
             g_object_unref(m);
         }
     }
-    if (addr == NULL) return JSValueMakeNull(ctx);
-    return kg_ptr_make(ctx, (uint64_t)(uintptr_t) addr);
+    if (a == 0) return JSValueMakeNull(ctx);
+    return kg_ptr_make(ctx, (uint64_t) a);
 }
 
 static JSValueRef
@@ -309,7 +312,8 @@ js_module_getBaseAddress(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     if (argc < 1) return JSValueMakeNull(ctx);
     JSStringRef js = JSValueToStringCopy(ctx, argv[0], NULL);
     char name[256] = {0};
-    if (js) { JSStringGetUTF8CString(js, name, sizeof(name)); JSStringRelease(js); }
+    JSStringGetUTF8CString(js, name, sizeof(name));
+    JSStringRelease(js);
 
     GumModule *m = gum_process_find_module_by_name(name);
     if (m == NULL) return JSValueMakeNull(ctx);
@@ -319,6 +323,7 @@ js_module_getBaseAddress(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     return kg_ptr_make(ctx, r->base_address);
 }
 
+/* ---------- Memory ---------- */
 
 static JSValueRef
 js_memory_readByteArray(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
@@ -329,11 +334,10 @@ js_memory_readByteArray(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
     size_t size = (size_t) JSValueToNumber(ctx, argv[1], NULL);
     if (size == 0 || size > 16 * 1024 * 1024) return JSValueMakeNull(ctx);
 
-    guint8 *buf = g_malloc(size);
     gsize nread = 0;
-    gboolean ok = gum_memory_read(GSIZE_TO_POINTER(addr), buf, size, &nread);
-    if (!ok || nread == 0) {
-        g_free(buf);
+    guint8 *buf = gum_memory_read(GSIZE_TO_POINTER((gsize) addr), size, &nread);
+    if (buf == NULL || nread == 0) {
+        if (buf) g_free(buf);
         return JSValueMakeNull(ctx);
     }
 
@@ -355,36 +359,37 @@ js_memory_writeByteArray(JSContextRef ctx, JSObjectRef fn, JSObjectRef self,
 {
     if (argc < 2) return JSValueMakeBoolean(ctx, FALSE);
     uint64_t addr = kg_ptr_addr(ctx, argv[0]);
+
     JSStringRef js = JSValueToStringCopy(ctx, argv[1], NULL);
     if (js == NULL) return JSValueMakeBoolean(ctx, FALSE);
-
     size_t len = JSStringGetMaximumUTF8CStringSize(js);
     char *hex = g_malloc(len);
     JSStringGetUTF8CString(js, hex, len);
     JSStringRelease(js);
 
     gsize nbytes = strlen(hex) / 2;
-    guint8 *buf = g_malloc(nbytes);
+    guint8 *buf = g_malloc(nbytes > 0 ? nbytes : 1);
     for (gsize i = 0; i < nbytes; i++) {
-        guint b;
+        guint b = 0;
         sscanf(hex + i * 2, "%2x", &b);
         buf[i] = (guint8) b;
     }
     g_free(hex);
 
-    gsize nwritten = 0;
-    gboolean ok = gum_memory_write(GSIZE_TO_POINTER(addr), buf, nbytes, &nwritten);
+    gboolean ok = gum_memory_write(GSIZE_TO_POINTER((gsize) addr), buf, nbytes);
     g_free(buf);
     return JSValueMakeBoolean(ctx, ok);
 }
 
+/* ---------- 注入全局 ---------- */
 
 static void
-kg_install(JSGlobalContextRef ctx, const char *name, JSObjectCallAsFunctionCallback fn)
+kg_install(JSGlobalContextRef ctx, const char *name,
+           JSObjectCallAsFunctionCallback fn)
 {
     JSStringRef n = JSStringCreateWithUTF8CString(name);
     JSObjectRef f = JSObjectMakeFunctionWithCallback(ctx, n, fn);
-    JSObjectSetProperty(ctx, JSGlobalContextGetGlobalObject(ctx),
+    JSObjectSetProperty(ctx, JSContextGetGlobalObject(ctx),
                         n, f, kJSPropertyAttributeNone, NULL);
     JSStringRelease(n);
 }
@@ -408,10 +413,7 @@ kg_eval(JSGlobalContextRef ctx, const char *src)
 }
 
 static const char *g_bootstrap =
-    "function __kgwrap(o) {"
-    "  if (!o) return o;"
-    "  return o;"
-    "}"
+    "function __kgwrap(o) { return o; }"
     "globalThis.hexdump = function(addr, len) {"
     "  return Memory_readByteArray(addr, len);"
     "};"
@@ -432,10 +434,8 @@ main(int argc, char **argv)
     gum_init_embedded();
 
     g_ptrClass = JSClassCreate(&g_ptrDef);
-    g_ptrDef.version = 0;
 
     JSGlobalContextRef ctx = JSGlobalContextCreate(NULL);
-    g_ctx = ctx;
 
     kg_install(ctx, "Process_get", js_process_get);
     kg_install(ctx, "Process_enumerateModules", js_process_enumerateModules);
@@ -462,7 +462,8 @@ main(int argc, char **argv)
         snprintf(expr, sizeof(expr),
                  "(function(){try{var __r=eval(%s);"
                  "if(__r!==undefined)console.log(JSON.stringify(__r));"
-                 "}catch(e){console.log('Error: '+e);}})();", line);
+                 "}catch(e){console.log('Error: '+e);}})();",
+                 line);
         kg_eval(ctx, expr);
     }
 
