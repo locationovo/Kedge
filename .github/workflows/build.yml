@@ -61,8 +61,8 @@ jobs:
       - name: Sign
         run: |
           ldid -Sentitlements.plist kedge
-          ldid -S libkedge_repl.dylib
-          ldid -S kg_agent.dylib
+          ldid -Sentitlements.plist kedge-repl
+          ldid -Sentitlements.plist kg_agent.dylib
 
       - name: Package .deb
         run: |
