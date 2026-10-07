@@ -32,14 +32,17 @@ jobs:
 
       - name: Download GLib headers
         run: |
-          curl -sLO https://snapshot.debian.org/archive/debian/20230611T000000Z/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
+          curl -sLO http://ftp.debian.org/debian/pool/main/g/glib2.0/libglib2.0-dev_2.74.6-2_arm64.deb
           ar x libglib2.0-dev_2.74.6-2_arm64.deb
           mkdir -p extract
           tar -C extract -xf data.tar.xz
           mkdir -p include/glib-2.0
           cp -R extract/usr/include/glib-2.0/glib include/glib-2.0/
           cp extract/usr/include/glib-2.0/glib.h include/glib-2.0/glib.h
-          cp glibconfig.h include/glib-2.0/glibconfig.h
+          find extract -name glibconfig.h -exec cp {} include/glib-2.0/glibconfig.h \;
+          echo "--- glibconfig.h ---"
+          ls -la include/glib-2.0/glibconfig.h
+          grep -E "G_BYTE_ORDER|G_OS_|GLIB_SIZEOF_LONG|GPid" include/glib-2.0/glibconfig.h | head
 
       - name: Build
         run: |
