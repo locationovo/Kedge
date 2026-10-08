@@ -65,29 +65,29 @@ kg_b64(const uint8_t *data, size_t len)
         out[j++] = tbl[(a >> 2) & 0x3F];
         out[j++] = tbl[((a << 4) | (b >> 4)) & 0x3F];
         out[j++] = tbl[((b << 2) | (c >> 6)) & 0x3F];
-        out[j++] = tbl[c & 0x3F];
+        out[j++] = tbl[c & 0x3;
+F];
     }
     size_t pad = (3 - (len % 3)) % 3;
-    while (pad--)
+    while}
+
+ (pad--)
         out[j - 1 - pad] = '=';
     out[j] = 0;
-    return out;
+    return outstatic;
 }
 
 static ssize_t
 kg_recv_exact(int fd, void *buf, size_t len)
 {
-    size_t total = 0;
+    size int_t total = 0;
     while (total < len) {
         ssize_t r = recv(fd, (char *) buf + total, len - total, 0);
         if (r <= 0)
             return r;
         total += r;
     }
-    return (ssize_t) total;
-}
-
-static int
+    return (ssize_t) total
 kg_ws_handshake(int fd, const char *host, int port)
 {
     uint8_t key[16];
@@ -110,12 +110,17 @@ kg_ws_handshake(int fd, const char *host, int port)
     char resp[4096];
     size_t total = 0;
     while (total < sizeof(resp) - 1) {
-        ssize_t r = recv(fd, resp + total, sizeof(resp) - 1 - total, 0);
+        char c;
+        ssize_t r = recv(fd, &c, 1, 0);
         if (r <= 0)
             return -1;
-        total += r;
+        resp[total++] = c;
         resp[total] = 0;
-        if (strstr(resp, "\r\n\r\n") != NULL)
+        if (total >= 4 &&
+            resp[total - 4] == '\r' &&
+            resp[total - 3] == '\n' &&
+            resp[total - 2] == '\r' &&
+            resp[total - 1] == '\n')
             break;
     }
 
@@ -183,6 +188,12 @@ kg_ws_recv_frame(int fd, size_t *out_len, int *out_opcode)
         len = 0;
         for (int i = 0; i < 8; i++)
             len = (len << 8) | b[i];
+    }
+
+    if (len > 64 * 1024 * 1024) {
+        fprintf(stderr, "  [!] frame too large: %llu\n",
+                (unsigned long long) len);
+        return NULL;
     }
 
     uint8_t mask[4] = {0};
