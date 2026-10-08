@@ -206,18 +206,21 @@ kg_ws_recv_frame(int fd, size_t *out_len, int *out_opcode)
 static uint8_t *
 kg_ws_recv_data(int fd, size_t *out_len)
 {
-    GByteArray *acc = g_byte_array_new();
+    size_t cap = 4096;
+    size_t used = 0;
+    uint8_t *acc = malloc(cap);
+
     while (1) {
         size_t flen = 0;
         int op = 0;
         uint8_t *frame = kg_ws_recv_frame(fd, &flen, &op);
         if (frame == NULL) {
-            g_byte_array_free(acc, TRUE);
+            free(acc);
             return NULL;
         }
         if (op == KG_WS_CLOSE) {
             free(frame);
-            g_byte_array_free(acc, TRUE);
+            free(acc);
             return NULL;
         }
         if (op == KG_WS_PING) {
@@ -229,18 +232,26 @@ kg_ws_recv_data(int fd, size_t *out_len)
             free(frame);
             continue;
         }
-        g_byte_array_append(acc, frame, flen);
+
+        if (used + flen > cap) {
+            while (used + flen > cap)
+                cap *= 2;
+            acc = realloc(acc, cap);
+        }
+        memcpy(acc + used, frame, flen);
+        used += flen;
+
         int fin = frame[0] & 0x80;
         free(frame);
         if (fin)
             break;
     }
 
-    *out_len = acc->len;
-    uint8_t *out = malloc(acc->len + 1);
-    memcpy(out, acc->data, acc->len);
-    out[acc->len] = 0;
-    g_byte_array_free(acc, TRUE);
+    *out_len = used;
+    uint8_t *out = malloc(used + 1);
+    memcpy(out, acc, used);
+    out[used] = 0;
+    free(acc);
     return out;
 }
 
@@ -265,31 +276,47 @@ static int
 kg_rpc_connect(KgRpc *rpc, const char *host, int port)
 {
     memset(rpc, 0, sizeof(*rpc));
-    rpc->fd = kg_tcp_connect(host, port);
-    if (rpc->fd < 0)
-        return -1;
 
+    fprintf(stderr, "  [c1] tcp connect\n");
+    rpc->fd = kg_tcp_connect(host, port);
+    if (rpc->fd < 0) {
+        fprintf(stderr, "  [c1] failed\n");
+        return -1;
+    }
+    fprintf(stderr, "  [c1] ok, fd=%d\n", rpc->fd);
+
+    fprintf(stderr, "  [c2] websocket handshake\n");
     if (kg_ws_handshake(rpc->fd, host, port) != 0) {
+        fprintf(stderr, "  [c2] failed\n");
         close(rpc->fd);
         return -1;
     }
+    fprintf(stderr, "  [c2] ok\n");
 
+    fprintf(stderr, "  [c3] recv challenge\n");
     size_t clen = 0;
     uint8_t *challenge = kg_ws_recv_data(rpc->fd, &clen);
     if (challenge == NULL || clen != 16) {
+        fprintf(stderr, "  [c3] failed, clen=%zu\n", clen);
         if (challenge) free(challenge);
         close(rpc->fd);
         return -1;
     }
+    fprintf(stderr, "  [c3] ok, 16 bytes\n");
 
+    fprintf(stderr, "  [c4] hmac\n");
     uint8_t response[32];
     CCHmac(kCCHmacAlgSHA256, "", 0, challenge, 16, response);
     free(challenge);
+    fprintf(stderr, "  [c4] ok\n");
 
+    fprintf(stderr, "  [c5] send response\n");
     if (kg_ws_send_raw(rpc->fd, response, 32) != 0) {
+        fprintf(stderr, "  [c5] failed\n");
         close(rpc->fd);
         return -1;
     }
+    fprintf(stderr, "  [c5] ok\n");
 
     rpc->connected = 1;
     return 0;
@@ -384,15 +411,6 @@ kg_json_get_string(const char *json, const char *key)
         }
     }
     return g_string_free(s, FALSE);
-}
-
-static int
-kg_json_get_int(const char *json, const char *key, int default_val)
-{
-    const char *p = kg_json_find_value(json, key);
-    if (p == NULL)
-        return default_val;
-    return atoi(p);
 }
 
 static char *
@@ -547,37 +565,6 @@ kg_rpc_load_script(KgRpc *rpc, const char *script_id)
     return ok ? 0 : -1;
 }
 
-static void
-kg_drain_messages(KgRpc *rpc)
-{
-    while (1) {
-        char *msg = kg_rpc_recv_json(rpc->fd);
-        if (msg == NULL)
-            return;
-
-        gchar *type = kg_json_get_string(msg, "type");
-        if (type == NULL) {
-            free(msg);
-            return;
-        }
-
-        if (g_strcmp0(type, "message") == 0) {
-            const char *m = kg_json_find_value(msg, "message");
-            if (m != NULL)
-                g_print("%.*s\n", (int) (strlen(m) > 800 ? 800 : strlen(m)), m);
-        } else if (g_strcmp0(type, "log") == 0) {
-            gchar *payload = kg_json_get_string(msg, "payload");
-            if (payload) {
-                g_print("%s\n", payload);
-                g_free(payload);
-            }
-        }
-
-        g_free(type);
-        free(msg);
-    }
-}
-
 static int
 kg_cmd_exec(KgRpc *rpc, int pid, const char *source)
 {
@@ -598,7 +585,7 @@ kg_cmd_exec(KgRpc *rpc, int pid, const char *source)
         g_free(session_id);
         return -1;
     }
-    g_print("[*] loaded, listening for messages (Ctrl-C to stop)\n");
+    g_print("[*] loaded, listening (Ctrl-C to stop)\n");
 
     while (1) {
         size_t len = 0;
@@ -612,10 +599,10 @@ kg_cmd_exec(KgRpc *rpc, int pid, const char *source)
             continue;
 
         gchar *type = kg_json_get_string(json, "type");
-        if (g_strcmp0(type, "message") == 0) {
+        if (type != NULL && g_strcmp0(type, "message") == 0) {
             const char *m = kg_json_find_value(json, "message");
             if (m) g_print("%.*s\n", (int) strlen(m), m);
-        } else if (g_strcmp0(type, "log") == 0) {
+        } else if (type != NULL && g_strcmp0(type, "log") == 0) {
             gchar *payload = kg_json_get_string(json, "payload");
             if (payload) {
                 g_print("%s\n", payload);
@@ -653,16 +640,20 @@ main(int argc, char **argv)
     int port = atoi(argv[2]);
     const char *cmd = argv[3];
 
+    fprintf(stderr, "[1] before connect\n");
+
     KgRpc rpc;
     if (kg_rpc_connect(&rpc, host, port) != 0) {
         fprintf(stderr, "connect %s:%d failed\n", host, port);
         return 1;
     }
-    fprintf(stderr, "[*] connected to %s:%d\n", host, port);
+    fprintf(stderr, "[2] connected, fd=%d\n", rpc.fd);
 
     int ret = 0;
     if (strcmp(cmd, "ps") == 0) {
+        fprintf(stderr, "[3] running ps\n");
         ret = kg_cmd_ps(&rpc);
+        fprintf(stderr, "[4] ps done, ret=%d\n", ret);
     } else if (strcmp(cmd, "attach") == 0) {
         if (argc < 5) {
             fprintf(stderr, "attach requires <pid>\n");
