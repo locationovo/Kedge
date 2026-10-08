@@ -32,8 +32,8 @@ kedge-repl: kg_repl_main.c
 kedge-remote: kg_remote.c
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 	    -o $@ kg_remote.c \
-	    -L./lib -lfrida-gum \
-	    -lpthread -ldl -lm
+	    -Wl,-force_load,./lib/libfrida-gum.a \
+	    -lpthread -ldl -lm -lresolv -lc++ -lobjc
 
 %.o: %.c kg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
